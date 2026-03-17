@@ -18,7 +18,3 @@ A translucent, floating note-taking editor that saves notes associated with the 
 ## Contributing
 
 Feel free to add more extensions to this repository. Each extension should have its own directory with a clear README explaining its functionality and installation instructions.
-
-## License
-
-[Add license information here]
