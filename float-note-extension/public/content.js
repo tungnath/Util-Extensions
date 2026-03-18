@@ -38,7 +38,16 @@ function initializeContentScript() {
 // Create and show the floating editor
 function showFloatingEditor(noteKey, existingContent = '') {
   if (floatingEditorContainer) {
+    // If the editor already exists in the page, make sure we're showing the latest note and content.
+    currentNoteKey = noteKey;
     floatingEditorContainer.style.display = 'flex';
+
+    const textarea = floatingEditorContainer.querySelector('#floating-note-textarea');
+    if (textarea && existingContent !== undefined) {
+      textarea.value = existingContent;
+    }
+
+    isEditorVisible = true;
     return;
   }
 
@@ -185,11 +194,11 @@ function showFloatingEditor(noteKey, existingContent = '') {
 
   document.body.appendChild(floatingEditorContainer);
 
-  // Get references to elements
-  const textarea = document.getElementById('floating-note-textarea');
-  const closeBtn = document.getElementById('floating-note-close');
-  const saveBtn = document.getElementById('floating-note-save');
-  const statusSpan = document.getElementById('floating-note-status');
+  // Get references to elements (scoped to our injected editor to avoid collisions with page elements)
+  const textarea = floatingEditorContainer.querySelector('#floating-note-textarea');
+  const closeBtn = floatingEditorContainer.querySelector('#floating-note-close');
+  const saveBtn = floatingEditorContainer.querySelector('#floating-note-save');
+  const statusSpan = floatingEditorContainer.querySelector('#floating-note-status');
 
   // Set existing content
   if (existingContent) {
