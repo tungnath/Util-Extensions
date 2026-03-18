@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Float Note Extension</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            color: #667eea;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+        
+        .last-updated {
+            font-size: 14px;
+            color: #999;
+        }
+        
+        h2 {
+            font-size: 22px;
+            color: #667eea;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+        
+        h3 {
+            font-size: 16px;
+            color: #555;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+        
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        .highlight {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .check-list {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .check-list li {
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .check-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4caf50;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .cross-list {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .cross-list li {
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .cross-list li:before {
+            content: "✕";
+            position: absolute;
+            left: 0;
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        tr:hover {
+            background: #f9f9f9;
+        }
+        
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            h2 {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📝 Privacy Policy</h1>
+            <h2 style="border: none; padding: 0; margin: 0; color: #666; font-size: 18px;">Float Note Extension</h2>
+            <p class="last-updated">Last Updated: February 2026</p>
+        </header>
+        
+        <section>
+            <h2>Overview</h2>
+            <p>Float Note ("the Extension") is committed to protecting your privacy. This Privacy Policy explains how the Extension handles your data.</p>
+        </section>
+        
+        <section>
+            <h2>Data Collection</h2>
+            <p><strong>The Extension does NOT collect, store, or transmit any personal data to external servers.</strong></p>
+            <p>All data remains entirely on your device. The Extension only:</p>
+            <ul class="check-list">
+                <li>Stores notes you create locally in your browser</li>
+                <li>Reads the current page URL to associate notes with webpages</li>
+                <li>Operates entirely offline without any network requests</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>What Data is Stored</h2>
+            
+            <h3>Local Storage</h3>
+            <ul>
+                <li><strong>User-created notes</strong> - Text content you type into the editor</li>
+                <li><strong>Page URLs</strong> - The webpage addresses where you create notes</li>
+                <li><strong>Timestamps</strong> - When each note was created</li>
+            </ul>
+            
+            <h3>Storage Location</h3>
+            <p>All data is stored locally using Chrome's <code>chrome.storage.local</code> API, which means:</p>
+            <ul class="check-list">
+                <li>Data never leaves your device</li>
+                <li>Data is not synced to the cloud</li>
+                <li>Data is not shared with any third parties</li>
+                <li>Data persists only on your computer</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>Data Usage</h2>
+            <p>The Extension uses stored data only for:</p>
+            <ol>
+                <li>Displaying your notes when you return to a webpage</li>
+                <li>Allowing you to edit and manage your notes</li>
+                <li>Providing the core functionality of the Extension</li>
+            </ol>
+        </section>
+        
+        <section>
+            <h2>Data Sharing</h2>
+            <p><strong>Your data is never shared with anyone.</strong> The Extension:</p>
+            <ul class="cross-list">
+                <li>Does not send data to external servers</li>
+                <li>Does not share data with third parties</li>
+                <li>Does not use analytics or tracking</li>
+                <li>Does not use advertising networks</li>
+                <li>Does not sell or monetize your data</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>Data Deletion</h2>
+            <p>You have full control over your data:</p>
+            <ul>
+                <li>Delete individual notes using the delete button in the Extension popup</li>
+                <li>Clear all notes for a webpage using the "Clear All" button</li>
+                <li>Uninstall the Extension to delete all stored notes</li>
+                <li>Clear browser data (note: this may also delete Extension storage)</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>Security</h2>
+            <p>Your data is protected by:</p>
+            <ul class="check-list">
+                <li>Local storage on your device (no network transmission)</li>
+                <li>Browser's built-in storage security mechanisms</li>
+                <li>No third-party access or processing</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>Third-Party Services</h2>
+            <p>The Extension does not use any third-party services, APIs, or libraries that collect data.</p>
+        </section>
+        
+        <section>
+            <h2>Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. Any changes will be reflected in the Extension's documentation.</p>
+        </section>
+        
+        <section>
+            <h2>Compliance</h2>
+            <p>This Extension complies with:</p>
+            <ul>
+                <li>Chrome Web Store policies</li>
+                <li>GDPR (General Data Protection Regulation)</li>
+                <li>CCPA (California Consumer Privacy Act)</li>
+                <li>Other applicable privacy laws</li>
+            </ul>
+        </section>
+        
+        <div class="highlight">
+            <strong>Summary:</strong> Float Note is a privacy-first extension. All your notes are stored locally on your device. We do not collect, track, or share any of your data.
+        </div>
+        
+        <footer>
+            <p>&copy; 2026 Float Note Extension. All rights reserved.</p>
+            <p>For more information, visit the <a href="https://github.com" style="color: #667eea;">GitHub repository</a></p>
+        </footer>
+    </div>
+</body>
+</html>
