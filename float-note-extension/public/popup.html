@@ -154,6 +154,28 @@
       color: #e74c3c;
     }
 
+    .popup-message {
+      display: none;
+      background: rgba(255, 255, 255, 0.95);
+      border-left: 4px solid #e74c3c;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #333;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn:disabled:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
     .empty-state {
       text-align: center;
       padding: 24px 12px;
@@ -238,6 +260,8 @@
       <button class="btn btn-secondary" id="clearAllBtn">Clear All</button>
     </div>
 
+    <div class="popup-message" id="popupMessage" role="alert"></div>
+
     <div class="notes-section">
       <h2>📌 Notes for this page</h2>
       <div class="notes-list" id="notesList">
@@ -262,7 +286,9 @@
     </div>
 
 
-    <script src="popup.js"></script>
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 
 </html>

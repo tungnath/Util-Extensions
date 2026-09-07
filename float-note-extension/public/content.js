@@ -1,26 +1,21 @@
 // Content Script for Float Note Extension
-// Injects floating editor into the page and handles communication
+// Injects floating editor into the page and handles communication.
+//
+// The popup injects this file on demand via chrome.scripting.executeScript, and it may be
+// injected into the same frame more than once. Everything is wrapped in an idempotency guard
+// so a re-injection cannot register a second onMessage listener -- two listeners would handle
+// one toggle request twice (show, then immediately hide), leaving the editor invisible.
 
-let floatingEditorContainer = null;
-let currentNoteKey = null;
-let isEditorVisible = false;
+(() => {
+  if (window.__floatNoteLoaded) return;
+  window.__floatNoteLoaded = true;
 
-// Initialize the content script
-function initializeContentScript() {
-  const url = window.location.href;
+  let floatingEditorContainer = null;
+  let currentNoteKey = null;
+  let isEditorVisible = false;
 
-  // Send message to background to initialize tab
-  chrome.runtime.sendMessage(
-    { action: 'initializeTab', url },
-    (response) => {
-      if (response) {
-        currentNoteKey = response.noteKey;
-        // Don't auto-show editor, wait for user to click extension icon
-      }
-    }
-  );
-
-  // Listen for messages from popup/background
+  // Register the listener immediately. The popup sends the toggle right after injection
+  // resolves, so waiting for DOMContentLoaded here would drop that message on slow pages.
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'showEditor') {
       showFloatingEditor(request.noteKey, request.content);
@@ -33,30 +28,31 @@ function initializeContentScript() {
       sendResponse({ success: true });
     }
   });
-}
 
-// Create and show the floating editor
-function showFloatingEditor(noteKey, existingContent = '') {
-  if (floatingEditorContainer) {
-    // If the editor already exists in the page, make sure we're showing the latest note and content.
-    currentNoteKey = noteKey;
-    floatingEditorContainer.style.display = 'flex';
+  // Create and show the floating editor
+  function showFloatingEditor(noteKey, existingContent = '') {
+    if (!document.body) return;
 
-    const textarea = floatingEditorContainer.querySelector('#floating-note-textarea');
-    if (textarea && existingContent !== undefined) {
-      textarea.value = existingContent;
+    if (floatingEditorContainer) {
+      // If the editor already exists in the page, make sure we're showing the latest note and content.
+      currentNoteKey = noteKey;
+      floatingEditorContainer.style.display = 'block';
+
+      const textarea = floatingEditorContainer.querySelector('#floating-note-textarea');
+      if (textarea && existingContent !== undefined) {
+        textarea.value = existingContent;
+      }
+
+      isEditorVisible = true;
+      return;
     }
 
-    isEditorVisible = true;
-    return;
-  }
+    currentNoteKey = noteKey;
 
-  currentNoteKey = noteKey;
-
-  // Create container
-  floatingEditorContainer = document.createElement('div');
-  floatingEditorContainer.id = 'floating-note-editor-container';
-  floatingEditorContainer.style.cssText = `
+    // Create container
+    floatingEditorContainer = document.createElement('div');
+    floatingEditorContainer.id = 'floating-note-editor-container';
+    floatingEditorContainer.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
@@ -67,8 +63,8 @@ function showFloatingEditor(noteKey, existingContent = '') {
     box-sizing: border-box;
   `;
 
-  // Create editor HTML
-  floatingEditorContainer.innerHTML = `
+    // Create editor HTML
+    floatingEditorContainer.innerHTML = `
     <div style="
       width: 100%;
       height: 100%;
@@ -108,7 +104,7 @@ function showFloatingEditor(noteKey, existingContent = '') {
           transition: color 0.2s;
         " title="Close editor">×</button>
       </div>
-      
+
       <textarea id="floating-note-textarea" style="
         flex: 1;
         padding: 16px 20px;
@@ -192,70 +188,87 @@ function showFloatingEditor(noteKey, existingContent = '') {
     </style>
   `;
 
-  document.body.appendChild(floatingEditorContainer);
+    document.body.appendChild(floatingEditorContainer);
 
-  // Get references to elements (scoped to our injected editor to avoid collisions with page elements)
-  const textarea = floatingEditorContainer.querySelector('#floating-note-textarea');
-  const closeBtn = floatingEditorContainer.querySelector('#floating-note-close');
-  const saveBtn = floatingEditorContainer.querySelector('#floating-note-save');
-  const statusSpan = floatingEditorContainer.querySelector('#floating-note-status');
+    // Get references to elements (scoped to our injected editor to avoid collisions with page elements)
+    const textarea = floatingEditorContainer.querySelector('#floating-note-textarea');
+    const closeBtn = floatingEditorContainer.querySelector('#floating-note-close');
+    const saveBtn = floatingEditorContainer.querySelector('#floating-note-save');
+    const statusSpan = floatingEditorContainer.querySelector('#floating-note-status');
 
-  // Set existing content
-  if (existingContent) {
-    textarea.value = existingContent;
-  }
+    // Set existing content
+    if (existingContent) {
+      textarea.value = existingContent;
+    }
 
-  // Auto-save on input (debounced)
-  let saveTimeout;
-  textarea.addEventListener('input', () => {
-    clearTimeout(saveTimeout);
-    statusSpan.textContent = 'Unsaved changes...';
-    statusSpan.style.color = '#ff9800';
+    // Auto-save on input (debounced)
+    let saveTimeout;
+    textarea.addEventListener('input', () => {
+      clearTimeout(saveTimeout);
+      statusSpan.textContent = 'Unsaved changes...';
+      statusSpan.style.color = '#ff9800';
 
-    saveTimeout = setTimeout(() => {
+      saveTimeout = setTimeout(() => {
+        saveNoteContent(textarea.value, statusSpan);
+      }, 2000);
+    });
+
+    // Manual save button
+    saveBtn.addEventListener('click', () => {
       saveNoteContent(textarea.value, statusSpan);
-    }, 2000);
-  });
+    });
 
-  // Manual save button
-  saveBtn.addEventListener('click', () => {
-    saveNoteContent(textarea.value, statusSpan);
-  });
+    // Close button
+    closeBtn.addEventListener('click', hideFloatingEditor);
 
-  // Close button
-  closeBtn.addEventListener('click', hideFloatingEditor);
+    // Allow dragging
+    makeEditorDraggable(floatingEditorContainer);
 
-  // Allow dragging
-  makeEditorDraggable(floatingEditorContainer);
-
-  isEditorVisible = true;
-}
-
-// Hide the floating editor
-function hideFloatingEditor() {
-  if (floatingEditorContainer) {
-    floatingEditorContainer.style.display = 'none';
-    isEditorVisible = false;
+    isEditorVisible = true;
   }
-}
 
-// Toggle editor visibility
-function toggleFloatingEditor(noteKey, content) {
-  if (isEditorVisible && floatingEditorContainer) {
-    hideFloatingEditor();
-  } else {
-    showFloatingEditor(noteKey, content);
+  // Hide the floating editor
+  function hideFloatingEditor() {
+    if (floatingEditorContainer) {
+      floatingEditorContainer.style.display = 'none';
+      isEditorVisible = false;
+    }
   }
-}
 
-// Save note content to storage
-function saveNoteContent(content, statusSpan) {
-  if (!currentNoteKey) return;
+  // Toggle editor visibility
+  function toggleFloatingEditor(noteKey, content) {
+    // The container can be removed from the page by the site itself (SPA re-renders, framework
+    // hydration). Treat a detached container as "gone" so the next click rebuilds it instead of
+    // toggling state for an element that is no longer in the DOM.
+    if (floatingEditorContainer && !floatingEditorContainer.isConnected) {
+      floatingEditorContainer = null;
+      isEditorVisible = false;
+    }
 
-  chrome.runtime.sendMessage(
-    { action: 'saveNote', noteKey: currentNoteKey, content },
-    (response) => {
-      if (response && response.success) {
+    if (isEditorVisible && floatingEditorContainer) {
+      hideFloatingEditor();
+    } else {
+      showFloatingEditor(noteKey, content);
+    }
+  }
+
+  // Save note content to storage
+  function saveNoteContent(content, statusSpan) {
+    if (!currentNoteKey) {
+      statusSpan.textContent = 'Cannot save (no note key)';
+      statusSpan.style.color = '#e74c3c';
+      return;
+    }
+
+    chrome.runtime.sendMessage(
+      { action: 'saveNote', noteKey: currentNoteKey, content },
+      (response) => {
+        if (chrome.runtime.lastError || !response || !response.success) {
+          statusSpan.textContent = 'Save failed';
+          statusSpan.style.color = '#e74c3c';
+          return;
+        }
+
         statusSpan.textContent = 'Saved';
         statusSpan.style.color = '#4caf50';
         setTimeout(() => {
@@ -263,49 +276,45 @@ function saveNoteContent(content, statusSpan) {
           statusSpan.style.color = '#999';
         }, 2000);
       }
+    );
+  }
+
+  // Make editor draggable
+  function makeEditorDraggable(element) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    const header = element.querySelector('div:first-child');
+    const textarea = element.querySelector('textarea');
+
+    header.onmousedown = dragMouseDown;
+
+    function dragMouseDown(e) {
+      // Don't drag if clicking on buttons or textarea
+      if (e.target.tagName === 'BUTTON' || e.target === textarea) {
+        return;
+      }
+      e.preventDefault();
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
     }
-  );
-}
 
-// Make editor draggable
-function makeEditorDraggable(element) {
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  const header = element.querySelector('div:first-child');
-  const textarea = element.querySelector('textarea');
-
-  header.onmousedown = dragMouseDown;
-
-  function dragMouseDown(e) {
-    // Don't drag if clicking on buttons or textarea
-    if (e.target.tagName === 'BUTTON' || e.target === textarea) {
-      return;
+    function elementDrag(e) {
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      element.style.top = (element.offsetTop - pos2) + 'px';
+      element.style.left = (element.offsetLeft - pos1) + 'px';
+      // The container is anchored with `right` on creation; clear it once the user drags so
+      // `left` is the only horizontal anchor and the panel does not fight itself.
+      element.style.right = 'auto';
     }
-    e.preventDefault();
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    document.onmouseup = closeDragElement;
-    document.onmousemove = elementDrag;
-  }
 
-  function elementDrag(e) {
-    e.preventDefault();
-    pos1 = pos3 - e.clientX;
-    pos2 = pos4 - e.clientY;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    element.style.top = (element.offsetTop - pos2) + 'px';
-    element.style.left = (element.offsetLeft - pos1) + 'px';
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
   }
-
-  function closeDragElement() {
-    document.onmouseup = null;
-    document.onmousemove = null;
-  }
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeContentScript);
-} else {
-  initializeContentScript();
-}
+})();

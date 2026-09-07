@@ -13,15 +13,27 @@ document.addEventListener('DOMContentLoaded', () => {
       currentTab = tabs[0];
       const url = currentTab.url;
 
+      if (isRestrictedUrl(url)) {
+        showMessage("Float Note can't run on this page. Open a page with valid url(http/https) and try again.");
+        document.getElementById('toggleEditorBtn').disabled = true;
+        return;
+      }
+
       // Initialize tab in background
       chrome.runtime.sendMessage(
         { action: 'initializeTab', url },
         (response) => {
-          if (response) {
-            currentNoteKey = response.noteKey;
-            currentContent = response.content;
-            loadNotesForCurrentPage();
+          if (chrome.runtime.lastError || !response) {
+            // The editor must stay usable if the service worker did not answer, so fall back to
+            // a fresh key rather than leaving currentNoteKey null -- a null key makes every save
+            // in the editor silently do nothing.
+            currentNoteKey = `${url}|${Date.now()}`;
+            return;
           }
+
+          currentNoteKey = response.noteKey;
+          currentContent = response.content;
+          loadNotesForCurrentPage();
         }
       );
     }
@@ -31,6 +43,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('toggleEditorBtn').addEventListener('click', toggleEditor);
   document.getElementById('clearAllBtn').addEventListener('click', clearAllNotes);
 });
+
+// Pages where extensions are not permitted to run any script
+function isRestrictedUrl(url) {
+  if (!url) return true;
+  if (/^(chrome|edge|brave|opera|vivaldi|about|chrome-extension|moz-extension|devtools|view-source):/i.test(url)) {
+    return true;
+  }
+  // The Chrome Web Store is blocked for all extensions
+  return /^https:\/\/(chromewebstore\.google\.com|chrome\.google\.com\/webstore)/i.test(url);
+}
+
+// Surface a problem in the popup instead of failing silently
+function showMessage(text) {
+  const el = document.getElementById('popupMessage');
+  if (!el) return;
+  el.textContent = text;
+  el.style.display = text ? 'block' : 'none';
+}
 
 // Load and display notes for current page
 function loadNotesForCurrentPage() {
@@ -51,50 +81,63 @@ function loadNotesForCurrentPage() {
 // Display notes in the popup
 function displayNotes(notes) {
   const notesList = document.getElementById('notesList');
+  notesList.textContent = '';
 
   if (notes.length === 0) {
-    notesList.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📭</div>
-        <div>No notes yet. Create one to get started!</div>
-      </div>
-    `;
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+
+    const icon = document.createElement('div');
+    icon.className = 'empty-state-icon';
+    icon.textContent = '📭';
+
+    const text = document.createElement('div');
+    text.textContent = 'No notes yet. Create one to get started!';
+
+    empty.append(icon, text);
+    notesList.appendChild(empty);
     return;
   }
 
-  notesList.innerHTML = notes
-    .map((note) => {
-      const date = new Date(parseInt(note.timestamp));
-      const timeStr = formatTime(date);
-      const preview = note.content.substring(0, 50).replace(/\n/g, ' ');
+  // Built with DOM APIs rather than innerHTML: note content is user-authored text and must
+  // never be parsed as markup inside the extension popup.
+  notes.forEach((note) => {
+    const date = new Date(parseInt(note.timestamp));
+    const preview = note.content.substring(0, 50).replace(/\n/g, ' ');
 
-      return `
-        <div class="note-item" data-key="${note.key}">
-          <div class="note-item-info">
-            <div class="note-item-time">${timeStr}</div>
-            <div class="note-item-preview">${preview || '(empty note)'}</div>
-          </div>
-          <button class="note-item-delete" data-key="${note.key}" title="Delete note">🗑️</button>
-        </div>
-      `;
-    })
-    .join('');
+    const item = document.createElement('div');
+    item.className = 'note-item';
 
-  // Add click listeners
-  document.querySelectorAll('.note-item').forEach((item) => {
+    const info = document.createElement('div');
+    info.className = 'note-item-info';
+
+    const time = document.createElement('div');
+    time.className = 'note-item-time';
+    time.textContent = formatTime(date);
+
+    const previewEl = document.createElement('div');
+    previewEl.className = 'note-item-preview';
+    previewEl.textContent = preview || '(empty note)';
+
+    info.append(time, previewEl);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'note-item-delete';
+    deleteBtn.title = 'Delete note';
+    deleteBtn.textContent = '🗑️';
+
+    item.append(info, deleteBtn);
+    notesList.appendChild(item);
+
     item.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('note-item-delete')) {
-        const key = item.getAttribute('data-key');
-        resumeNote(key);
+      if (e.target !== deleteBtn) {
+        resumeNote(note.key);
       }
     });
-  });
 
-  document.querySelectorAll('.note-item-delete').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
+    deleteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const key = btn.getAttribute('data-key');
-      deleteNote(key);
+      deleteNote(note.key);
     });
   });
 }
@@ -114,50 +157,56 @@ function resumeNote(noteKey) {
 }
 
 // Toggle editor visibility
+//
+// Ordering matters here. The popup document is destroyed the moment window.close() runs and
+// every pending callback in it dies with it, so the editor has to be confirmed open BEFORE the
+// popup closes. Closing on a timer races the injection and drops the toggle message.
 function toggleEditor() {
-  if (!currentTab) return;
+  if (!currentTab || !currentTab.id) return;
 
-  chrome.tabs.sendMessage(
-    currentTab.id,
+  if (isRestrictedUrl(currentTab.url)) {
+    showMessage("Float Note can't run on this page.");
+    return;
+  }
+
+  showMessage('');
+
+  const message = {
+    action: 'toggleEditor',
+    noteKey: currentNoteKey || `${currentTab.url}|${Date.now()}`,
+    content: currentContent
+  };
+
+  // Inject first, then send. content.js guards against double-injection, so injecting
+  // unconditionally is a no-op when it is already loaded -- and it removes the
+  // "send, fail, inject, re-send" race entirely.
+  chrome.scripting.executeScript(
     {
-      action: 'toggleEditor',
-      noteKey: currentNoteKey,
-      content: currentContent
+      target: { tabId: currentTab.id },
+      files: ['content.js']
     },
-    (response) => {
+    () => {
       if (chrome.runtime.lastError) {
-        // Content script not loaded, inject it
-        injectContentScript();
+        showMessage(
+          'Float Note needs access to this page. Right-click the extension icon, open ' +
+          '"This can read and change site data" and choose "On all sites", then try again.'
+        );
+        console.error('Float Note could not inject content.js:', chrome.runtime.lastError.message);
+        return;
       }
+
+      chrome.tabs.sendMessage(currentTab.id, message, () => {
+        if (chrome.runtime.lastError) {
+          showMessage('Could not reach this page. Reload the tab and try again.');
+          console.error('Float Note could not reach content.js:', chrome.runtime.lastError.message);
+          return;
+        }
+
+        // Close only after the content script has acknowledged the toggle.
+        window.close();
+      });
     }
   );
-
-  // Close popup after opening editor
-  setTimeout(() => {
-    window.close();
-  }, 100);
-}
-
-// Inject content script into current tab
-function injectContentScript() {
-  if (!currentTab) return;
-
-  chrome.scripting.executeScript({
-    target: { tabId: currentTab.id },
-    files: ['content.js']
-  }, () => {
-    // After injection, try to toggle editor again
-    setTimeout(() => {
-      chrome.tabs.sendMessage(
-        currentTab.id,
-        {
-          action: 'toggleEditor',
-          noteKey: currentNoteKey,
-          content: currentContent
-        }
-      );
-    }, 100);
-  });
 }
 
 // Delete a note
@@ -185,18 +234,28 @@ function clearAllNotes() {
   chrome.runtime.sendMessage(
     { action: 'getNotesByUrl', url },
     (response) => {
-      if (response && response.notes) {
-        response.notes.forEach((note) => {
-          chrome.runtime.sendMessage({
-            action: 'deleteNote',
-            noteKey: note.key
-          });
-        });
+      if (!response || !response.notes) return;
 
-        setTimeout(() => {
-          loadNotesForCurrentPage();
-        }, 100);
+      let remaining = response.notes.length;
+      if (remaining === 0) {
+        loadNotesForCurrentPage();
+        return;
       }
+
+      // Refresh once every delete has actually completed, rather than guessing with a timer.
+      response.notes.forEach((note) => {
+        chrome.runtime.sendMessage(
+          { action: 'deleteNote', noteKey: note.key },
+          () => {
+            remaining -= 1;
+            if (remaining === 0) {
+              currentNoteKey = `${url}|${Date.now()}`;
+              currentContent = '';
+              loadNotesForCurrentPage();
+            }
+          }
+        );
+      });
     }
   );
 }

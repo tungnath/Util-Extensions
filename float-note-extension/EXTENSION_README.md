@@ -126,6 +126,8 @@ https://example.com/page|1708686000000
 - `storage` - Access to Chrome's local storage API
 - `tabs` - Get current tab information
 - `scripting` - Inject content script into pages
+- `activeTab` - Guarantees access to the current tab when you click the toolbar icon, even if
+  site access for the extension has been narrowed to "on click"
 - `<all_urls>` - Run on any website
 
 ### Message Passing
@@ -204,5 +206,5 @@ For issues or feature requests:
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: March 2026
+**Version**: 1.0.1  
+**Last Updated**: September 2026

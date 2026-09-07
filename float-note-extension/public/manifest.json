@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Float Note",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A translucent floating note-taking editor that saves notes per URL with timestamp",
   "permissions": [
     "storage",
     "tabs",
-    "scripting"
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>"
