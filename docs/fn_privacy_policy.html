@@ -177,7 +177,7 @@
         <header>
             <h1>📝 Privacy Policy</h1>
             <h2 style="border: none; padding: 0; margin: 0; color: #666; font-size: 18px;">Float Note Extension</h2>
-            <p class="last-updated">Last Updated: March 2026</p>
+            <p class="last-updated">Last Updated: September 2026</p>
         </header>
         
         <section>
@@ -216,6 +216,42 @@
             </ul>
         </section>
         
+        <section>
+            <h2>Permissions and Why They're Needed</h2>
+            <p>The Extension requests the minimum set of permissions required to open the note editor and store your notes on your device. None of them are used to collect, read, or transmit the content of the pages you visit.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Permission</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>storage</code></td>
+                        <td>Read and write your notes to local browser storage.</td>
+                    </tr>
+                    <tr>
+                        <td><code>tabs</code></td>
+                        <td>Identify the current tab's URL so a note can be associated with the right page.</td>
+                    </tr>
+                    <tr>
+                        <td><code>scripting</code></td>
+                        <td>Inject the floating editor interface into the active page.</td>
+                    </tr>
+                    <tr>
+                        <td><code>activeTab</code></td>
+                        <td>Grant access to the current tab at the moment you click the Float Note toolbar icon, so the editor can still open if you have limited the Extension's site access to "on click".</td>
+                    </tr>
+                    <tr>
+                        <td><code>host_permissions</code> (<code>&lt;all_urls&gt;</code>)</td>
+                        <td>Allow the editor to run on any site you choose to take notes on.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>The Extension never reads page content. It appends its own editor element to the page and uses the tab's URL only as a local key for storing your notes.</p>
+        </section>
+
         <section>
             <h2>Data Usage</h2>
             <p>The Extension uses stored data only for:</p>
